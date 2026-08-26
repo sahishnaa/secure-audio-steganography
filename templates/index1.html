@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AURA-MCOMM — Covert Communication System</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #04060d;
+    --surface: #080d1a;
+    --border: #0f2040;
+    --accent: #00d4ff;
+    --accent2: #00ff9f;
+    --accent3: #ff6b35;
+    --text: #c8d8e8;
+    --muted: #3a5070;
+    --sender-color: #00ff9f;
+    --receiver-color: #00d4ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+  }
+
+  /* ── CANVAS BACKGROUND ── */
+  #bg-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+  }
+
+  /* ── SCANLINES ── */
+  .scanlines {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+  }
+
+  /* ── VIGNETTE ── */
+  .vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center,
+      transparent 40%,
+      rgba(4,6,13,0.7) 100%
+    );
+  }
+
+  /* ── MAIN ── */
+  .container {
+    position: relative;
+    z-index: 10;
+    width: 100%; height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 40px 20px;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 20;
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(4,6,13,0.85);
+    backdrop-filter: blur(8px);
+  }
+
+  .topbar-id {
+    font-size: 0.62rem;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+  }
+
+  .topbar-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.62rem;
+    color: var(--accent2);
+    letter-spacing: 0.1em;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent2);
+    box-shadow: 0 0 10px var(--accent2);
+    animation: blink 1.4s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+  }
+
+  /* ── HERO ── */
+  .hero {
+    text-align: center;
+    animation: fadeUp 1s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .system-tag {
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+
+  .title {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: clamp(3rem, 8vw, 6rem);
+    letter-spacing: 0.06em;
+    line-height: 1;
+    color: #fff;
+    text-shadow:
+      0 0 40px rgba(0,212,255,0.4),
+      0 0 80px rgba(0,212,255,0.15);
+    opacity: 0;
+    animation: fadeUp 0.9s 0.35s ease both;
+  }
+
+  .title span { color: var(--accent); }
+
+  .subtitle {
+    font-family: 'Exo 2', sans-serif;
+    font-weight: 300;
+    font-size: clamp(0.75rem, 2vw, 1rem);
+    color: var(--muted);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-top: 14px;
+    opacity: 0;
+    animation: fadeUp 0.9s 0.5s ease both;
+  }
+
+  /* ── DIVIDER LINE ── */
+  .hero-line {
+    width: 320px;
+    height: 1px;
+    margin: 36px auto;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    animation: fadeUp 0.9s 0.65s ease both;
+  }
+
+  /* ── DESC ── */
+  .desc {
+    font-family: 'Exo 2', sans-serif;
+    font-size: 0.82rem;
+    color: rgba(200,216,232,0.55);
+    text-align: center;
+    max-width: 480px;
+    line-height: 1.8;
+    margin: 0 auto 48px;
+    letter-spacing: 0.04em;
+    opacity: 0;
+    animation: fadeUp 0.9s 0.75s ease both;
+  }
+
+  /* ── PORTAL BUTTONS ── */
+  .portals {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeUp 0.9s 0.9s ease both;
+  }
+
+  .portal-btn {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 220px;
+    padding: 30px 20px;
+    border: 1px solid;
+    border-radius: 4px;
+    text-decoration: none;
+    font-family: 'Share Tech Mono', monospace;
+    cursor: pointer;
+    transition: all 0.3s;
+    overflow: hidden;
+    background: rgba(8,13,26,0.8);
+  }
+
+  .portal-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .portal-btn:hover::before { opacity: 1; }
+
+  .portal-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    transform: scaleX(0);
+    transition: transform 0.3s;
+    transform-origin: left;
+  }
+
+  .portal-btn:hover::after { transform: scaleX(1); }
+
+  /* Sender */
+  .portal-sender {
+    border-color: rgba(0,255,159,0.3);
+    color: var(--sender-color);
+  }
+
+  .portal-sender::before {
+    background: rgba(0,255,159,0.05);
+  }
+
+  .portal-sender::after {
+    background: var(--sender-color);
+    box-shadow: 0 0 12px var(--sender-color);
+  }
+
+  .portal-sender:hover {
+    border-color: var(--sender-color);
+    box-shadow: 0 0 30px rgba(0,255,159,0.2), inset 0 0 30px rgba(0,255,159,0.05);
+    transform: translateY(-3px);
+  }
+
+  /* Receiver */
+  .portal-receiver {
+    border-color: rgba(0,212,255,0.3);
+    color: var(--receiver-color);
+  }
+
+  .portal-receiver::before {
+    background: rgba(0,212,255,0.05);
+  }
+
+  .portal-receiver::after {
+    background: var(--receiver-color);
+    box-shadow: 0 0 12px var(--receiver-color);
+  }
+
+  .portal-receiver:hover {
+    border-color: var(--receiver-color);
+    box-shadow: 0 0 30px rgba(0,212,255,0.2), inset 0 0 30px rgba(0,212,255,0.05);
+    transform: translateY(-3px);
+  }
+
+  .portal-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+
+  .portal-label {
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+  }
+
+  .portal-sub {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    opacity: 0.55;
+  }
+
+  .portal-corner {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-color: currentColor;
+    border-style: solid;
+    opacity: 0.4;
+  }
+
+  .portal-corner.tl { top: 6px; left: 6px; border-width: 1px 0 0 1px; }
+  .portal-corner.tr { top: 6px; right: 6px; border-width: 1px 1px 0 0; }
+  .portal-corner.bl { bottom: 6px; left: 6px; border-width: 0 0 1px 1px; }
+  .portal-corner.br { bottom: 6px; right: 6px; border-width: 0 1px 1px 0; }
+
+  /* ── BOTTOM BAR ── */
+  .bottombar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 20;
+    padding: 10px 32px;
+    border-top: 1px solid var(--border);
+    background: rgba(4,6,13,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.58rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .ist-clock { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+
+<div class="topbar">
+  <div class="topbar-id">SYS-ID: AURA-COMM-v2.1 // CLASSIFIED</div>
+  <div class="topbar-status">
+    <div class="status-dot"></div>
+    SYSTEM ONLINE
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <div class="system-tag">&#x25B6; Context-Aware Covert Communication System</div>
+    <div class="title">AURA<span>-</span>MCOMM</div>
+    <div class="subtitle">Audio Steganography &nbsp;·&nbsp; Context Key Derivation &nbsp;·&nbsp; End-to-End Encrypted</div>
+    <div class="hero-line"></div>
+    <div class="desc">
+      Secure covert communication using context-based key generation and audio steganography.
+      Select your role to enter the system.
+    </div>
+
+    <div class="portals">
+      <a href="/sender" class="portal-btn portal-sender">
+        <div class="portal-corner tl"></div>
+        <div class="portal-corner tr"></div>
+        <div class="portal-corner bl"></div>
+        <div class="portal-corner br"></div>
+        <div class="portal-icon">📡</div>
+        <div class="portal-label">SENDER</div>
+        <div class="portal-sub">USER 1 · ENCRYPT &amp; EMBED</div>
+      </a>
+
+      <a href="/receiver" class="portal-btn portal-receiver">
+        <div class="portal-corner tl"></div>
+        <div class="portal-corner tr"></div>
+        <div class="portal-corner bl"></div>
+        <div class="portal-corner br"></div>
+        <div class="portal-icon">🔍</div>
+        <div class="portal-label">RECEIVER</div>
+        <div class="portal-sub">USER 2 · EXTRACT &amp; DECRYPT</div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="bottombar">
+  <div>PUBLIC CHANNEL · AUDIO STEGANOGRAPHY PROTOCOL</div>
+  <div class="ist-clock" id="clock">--:--:-- IST</div>
+  <div>ENC: AES-256 // STEGO: AUDIO LSB</div>
+</div>
+
+<script>
+  // ── IST Clock ──
+  function updateClock() {
+    const t = new Date().toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata', hour12: false,
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+    document.getElementById('clock').textContent = t + ' IST';
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ── Particle canvas ──
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [], nodes = [];
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Grid nodes
+  const cols = 12, rows = 7;
+  for (let i = 0; i <= cols; i++) {
+    for (let j = 0; j <= rows; j++) {
+      nodes.push({
+        x: (i / cols) * 1.2 - 0.1,
+        y: (j / rows) * 1.2 - 0.1,
+        active: Math.random() > 0.6,
+        timer: Math.random() * 200
+      });
+    }
+  }
+
+  // Floating particles
+  for (let i = 0; i < 60; i++) {
+    particles.push({
+      x: Math.random(), y: Math.random(),
+      vx: (Math.random() - 0.5) * 0.0003,
+      vy: (Math.random() - 0.5) * 0.0003,
+      r: Math.random() * 1.5 + 0.3,
+      color: Math.random() > 0.5 ? '#00d4ff' : '#00ff9f',
+      alpha: Math.random() * 0.5 + 0.1
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(15,32,64,0.6)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= cols; i++) {
+      ctx.beginPath();
+      ctx.moveTo((i / cols) * W, 0);
+      ctx.lineTo((i / cols) * W, H);
+      ctx.stroke();
+    }
+    for (let j = 0; j <= rows; j++) {
+      ctx.beginPath();
+      ctx.moveTo(0, (j / rows) * H);
+      ctx.lineTo(W, (j / rows) * H);
+      ctx.stroke();
+    }
+
+    // Nodes
+    nodes.forEach(n => {
+      n.timer--;
+      if (n.timer <= 0) {
+        n.active = !n.active;
+        n.timer = Math.random() * 300 + 100;
+      }
+      if (!n.active) return;
+      const x = n.x * W, y = n.y * H;
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,212,255,0.5)';
+      ctx.fill();
+    });
+
+    // Particles
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = 1; if (p.x > 1) p.x = 0;
+      if (p.y < 0) p.y = 1; if (p.y > 1) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x * W, p.y * H, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.alpha;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+</script>
+</body>
+</html>

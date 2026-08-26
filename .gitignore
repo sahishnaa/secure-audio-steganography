@@ -1,0 +1,31 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Generated audio
+audio/input.wav
+audio/stego.wav
+
+# Generated/context images
+image/context.jpg
+
+# Temporary files
+*.tmp
+*.log
+
+# IDE/editor files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local message/output files
+message.txt
